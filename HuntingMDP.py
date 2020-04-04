@@ -217,10 +217,3 @@ class HunterMDP:
         return T, R
 
 
-buffalo = Animal(50, 0.5, 0.3)
-rabbit = Animal(10, 0.7, 0)
-lemur = Animal(10, 0.5, 0.05)
-bird = Animal(5, 0.9, 0)
-ostrich = Animal(25, 0.8, 0.2)
-
-mdp = HunterMDP([buffalo, rabbit, lemur, bird, ostrich], [0.05, 0.05, 0.05, 0.05, 0.05])
