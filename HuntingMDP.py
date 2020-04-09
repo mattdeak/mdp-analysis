@@ -12,6 +12,10 @@ NO_ANIMAL = -1
 STARVED = -1
 
 
+class TerminalStateError(Exception):
+    pass
+
+
 class Animal:
     def __init__(self, energy, escape_chance, injure_chance):
         assert (
@@ -22,15 +26,51 @@ class Animal:
         self.injury_chance = injure_chance
 
 
-class HunterMDP:
+class Hunter:
+    def __init__(self, environment, policy):
+        """__init__
+
+        Parameters
+        ----------
+
+        environment : HunterMDP
+        policy : Function that takes a state and returns an action
+
+        Returns
+        -------
+        """
+        self.observation = environment.reset()
+        self.policy = policy
+        self.environment = environment
+
+    def act(self):
+        action = self.policy(self.observation)
+        self.observation, reward, terminal = self.environment.step(
+            self.observation, action
+        )
+        return self.observation, reward, terminal
+
+    def peek_action(self):
+        """peek_action
+
+        Return the action given the current state, but don't perform it"""
+        action = self.policy(self.observation)
+        return action
+
+    def restart(self):
+        self.observation = self.environment.reset()
+
+
+class HuntingMDP:
     def __init__(
         self,
         animals,
         appearance_weights,
         hunting_cost=4,
-        living_cost=5,
+        living_cost=2,
         recovery_time=5,
-        injured_penalty=0.05,
+        injured_penalty=0.2,
+
     ):
         assert sum(appearance_weights) <= 1, "Appearance weights cannot exceed 1"
         self.appearance_weights = {}
@@ -54,8 +94,7 @@ class HunterMDP:
 
         self.build_state_conversion_dicts()
 
-        state = []  # animal_type, hour, current_energy, injured
-
+        state = []
 
     def get_action_space(self, state):
         animal_present = state[ANIMAL_IX] != NO_ANIMAL
@@ -63,6 +102,12 @@ class HunterMDP:
             return [WAIT]
         else:
             return [HUNT, WAIT]
+
+    def reset(self):
+        # Start state will always be max energy, random animal
+        state =  (np.random.randint(-1, self.N_animals), self.max_energy, 0)
+        self.state = state
+        return state
 
     def is_terminal(self, state):
         if state[ENERGY_IX] <= 0:
@@ -74,9 +119,58 @@ class HunterMDP:
         if not self.is_terminal(state):
             reward = 1
         else:
-            reward = -1000
+            reward = 0
 
         return reward
+
+    @property
+    def state_space(self):
+        return len(self.state_to_idx)
+
+    @property
+    def action_space(self):
+        return [0, 1]
+
+    def step(self, action):
+        state = self.state # alias
+        if self.is_terminal(state):
+            raise TerminalStateError("Cannot perform step on terminal state")
+
+        animal = state[ANIMAL_IX]
+        injury = state[INJURED_IX]
+        next_animal = np.random.choice(
+            list(self.appearance_weights.keys()),
+            p=list(self.appearance_weights.values()),
+        )
+        if action == HUNT:
+            escape_chance = self.animals[animal].escape_chance
+            injury_chance = self.animals[animal].injury_chance
+
+            success_chance = 1 - escape_chance - injury_chance
+            # Normalize by injury penalty
+            escape_chance = escape_chance * (self.injured_penalty * injury + 1)
+            injury_chance = injury_chance * (self.injured_penalty * injury + 1)
+
+            normalization_constant = success_chance + escape_chance + injury_chance
+            success_chance /= normalization_constant
+            escape_chance /= normalization_constant
+            injury_chance /= normalization_constant
+
+            hunt_result = np.random.choice(
+                ["success", "escape", "injury"],
+                p=[success_chance, escape_chance, injury_chance],
+            )
+            result = self.get_result_state(
+                state, action, next_animal, result_type=hunt_result
+            )
+        else:
+            result = self.get_result_state(state, action, next_animal)
+
+        reward = self.get_reward(result)
+        terminal = self.is_terminal(result)
+
+        self.state = result
+        return result, reward, terminal
 
     def get_result_state(self, state, action, next_animal, result_type="success"):
         assert result_type in ["success", "escape", "injury"], "Invalid result type"
@@ -88,29 +182,32 @@ class HunterMDP:
         injured = state[INJURED_IX]
         animal = state[ANIMAL_IX]
 
-        if action == HUNT and result_type == "success":
+        # Handle the no-animal case
+        if animal == NO_ANIMAL and action == HUNT:
+            # Always fail, no matter what
             result_state[ENERGY_IX] -= self.hunting_cost + self.living_cost
-            result_state[ENERGY_IX] += self.animals[state[ANIMAL_IX]].energy
-        elif action == HUNT and result_type == "escape":
-            result_state[ENERGY_IX] -= self.hunting_cost + self.living_cost
-        elif action == HUNT and result_type == "injury":
-            result_state[ENERGY_IX] -= self.hunting_cost - self.living_cost
-            result_state[INJURED_IX] = self.recovery_time
-
-        elif action == WAIT:
-            result_state[ENERGY_IX] -= self.living_cost
-            if injured > 0:
-                result_state[INJURED_IX] -= 1
         else:
-            raise NotImplementedError("I don't htink this should be possible")
+            if action == HUNT and result_type == "success":
+                result_state[ENERGY_IX] -= self.hunting_cost + self.living_cost
+                result_state[ENERGY_IX] += self.animals[animal].energy
+            elif action == HUNT and result_type == "escape":
+                result_state[ENERGY_IX] -= self.hunting_cost + self.living_cost
+            elif action == HUNT and result_type == "injury":
+                result_state[ENERGY_IX] -= self.hunting_cost + self.living_cost
+                result_state[INJURED_IX] = self.recovery_time
+
+            elif action == WAIT:
+                result_state[ENERGY_IX] -= self.living_cost
+                if injured > 0:
+                    result_state[INJURED_IX] -= 1
+            else:
+                raise NotImplementedError("I don't htink this should be possible")
 
         # truncate energy
         if result_state[ENERGY_IX] < 0:
             result_state[ENERGY_IX] = STARVED
         elif result_state[ENERGY_IX] > self.max_energy:
             result_state[ENERGY_IX] = self.max_energy
-
-
 
         result_state[ANIMAL_IX] = next_animal
         return tuple(result_state)
@@ -141,7 +238,9 @@ class HunterMDP:
                         state_ix = self.state_to_idx[state]
                         if self.is_terminal(state):
                             T[action, state_ix, state_ix] = 1
-                            R[action, state_ix, state_ix] = self.get_reward(state)
+                            R[
+                                action, state_ix, state_ix
+                            ] = 0  # Transitioning to this state will give -1000, but we'll cut it off there
 
                         else:
                             for next_animal in range(-1, self.N_animals):
@@ -164,18 +263,24 @@ class HunterMDP:
                                     injury_ix = self.state_to_idx[result_state_injury]
 
                                     escape_chance = self.animals[
-                                        ANIMAL_IX
+                                        animal_ix
                                     ].escape_chance
                                     injury_chance = self.animals[
-                                        ANIMAL_IX
+                                        animal_ix
                                     ].injury_chance
 
                                     success_chance = 1 - escape_chance - injury_chance
                                     # Normalize by injury penalty
-                                    escape_chance = escape_chance * (self.injured_penalty*injury + 1)
-                                    injury_chance = injury_chance * (self.injured_penalty*injury + 1)
-                                    
-                                    normalization_constant = (success_chance + escape_chance + injury_chance)
+                                    escape_chance = escape_chance * (
+                                        self.injured_penalty * injury + 1
+                                    )
+                                    injury_chance = injury_chance * (
+                                        self.injured_penalty * injury + 1
+                                    )
+
+                                    normalization_constant = (
+                                        success_chance + escape_chance + injury_chance
+                                    )
                                     success_chance /= normalization_constant
                                     escape_chance /= normalization_constant
                                     injury_chance /= normalization_constant
@@ -211,9 +316,7 @@ class HunterMDP:
                                     T[
                                         action, state_ix, result_ix
                                     ] += self.appearance_weights[next_animal]
-                                    R[action, state_ix, success_ix] = self.get_reward(
+                                    R[action, state_ix, result_ix] = self.get_reward(
                                         result_state
                                     )
         return T, R
-
-
