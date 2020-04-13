@@ -1,4 +1,9 @@
 from mdptoolbox.mdp import ValueIteration, PolicyIteration
+import os
+
+def listdir(directory):
+    # Ignores hidden files
+    return [x for x in os.listdir(directory) if not x.startswith('.')]
 
 
 class Agent:

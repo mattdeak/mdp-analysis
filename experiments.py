@@ -21,6 +21,7 @@ from FrozenLake import (
 import pickle
 import os
 import numpy as np
+from utils import listdir
 
 output_dir = "output"
 frozenlake_dir = os.path.join(output_dir, "frozenlake")
@@ -122,7 +123,7 @@ def simulate_frozenlake_policy(policy_location, N=1000):
 def simulate_all_frozenlake_policies():
     policies = [
         os.path.join(frozenlake_dir, x)
-        for x in os.listdir(frozenlake_dir)
+        for x in listdir(frozenlake_dir)
         if "evaluation" not in x
     ]
     for policy in policies:
@@ -153,7 +154,7 @@ def simulate_hunterschoice_policy(policy_location, N=1000):
         solver = pickle.load(f)
 
     grounds = create_small_hunting_environment()
-    policy = create_hunterschoice_policy(solver.policy, "small")
+    policy = create_hunterschoice_policy(solver.policy)
 
     agent = Agent(grounds, policy)
 
@@ -171,7 +172,7 @@ def simulate_hunterschoice_policy(policy_location, N=1000):
 def simulate_all_hunterschoice_policies():
     policies = [
         os.path.join(hunter_dir, x)
-        for x in os.listdir(hunter_dir)
+        for x in listdir(hunter_dir)
         if "evaluation" not in x
     ]
     for policy in policies:
@@ -227,7 +228,7 @@ def run_all_qlearners(
     env_map = {
         "hunter": hunter,
         "smalllake": small_lake,
-        "large_lake": shaped_largelake,
+        "largelake": shaped_largelake,
         "shaped_smalllake": shaped_smallake,
         "shaped_largelake": shaped_largelake,
     }
@@ -274,6 +275,10 @@ def reset_qlearner_folders():
         "shaped_smalllake",
         "shaped_largelake",
     ]:
+        whole_sub_dir = os.path.join(output_dir, 'qlearning',sub_dir)
+        if not os.path.exists(whole_sub_dir):
+            os.mkdir(whole_sub_dir)
+
         for explore_dir in [
             "random",
             "equal",
@@ -282,12 +287,13 @@ def reset_qlearner_folders():
             "epsilondecay",
             "epsilonstatedecay",
         ]:
+
             clear_dir = os.path.join(output_dir, "qlearning", sub_dir, explore_dir)
             if not os.path.exists(clear_dir):
                 os.mkdir(clear_dir)
                 continue
 
-            for filename in os.listdir(clear_dir):
+            for filename in listdir(clear_dir):
                 os.unlink(os.path.join(clear_dir, filename))
 
 
@@ -299,7 +305,7 @@ def extract_episode(filepath):
 
 
 def get_sorted_qlearner_filepaths(directory):
-    files = os.listdir(directory)
+    files = listdir(directory)
     files = sorted(files, key=extract_episode)
     return files
 

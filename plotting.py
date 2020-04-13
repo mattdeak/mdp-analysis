@@ -13,8 +13,8 @@ from matplotlib import colors
 from FrozenLake import get_small_lake, get_large_lake
 from experiments import create_small_hunting_environment, extract_episode
 from hunting_utils import get_solver_stats_by_animal
+from utils import listdir
 import seaborn as sns
-import PIL
 
 # Vi/Pi Plots
 
@@ -277,6 +277,8 @@ def plot_comparison(
 
 
 def plot_frozenlake_stats():
+    small_statistics, _ = get_small_lake_stats_policies()
+    large_statistics, _ = get_large_lake_stats_policies()
     (
         discount_rates,
         small_vi_iters,
@@ -457,6 +459,8 @@ def plot_success_rates(env="FrozenLake"):
 
 
 def render_frozenlake_policies(title, discount_rate, size):
+    _, small_policies = get_small_lake_stats_policies()
+    _, large_policies = get_large_lake_stats_policies()
     small_lake = get_small_lake()
     large_lake = get_large_lake()
     if size == "small":

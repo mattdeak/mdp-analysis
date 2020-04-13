@@ -4,12 +4,12 @@ from experiments import *
 
 def run_all():
     print("Running all VI/PI Solvers")
-    run_frozenlake_solvers()
-    run_hunterschoice_solvers()
+    # run_frozenlake_solvers()
+    # run_hunterschoice_solvers()
 
     print("Using Solvers to generate Policies")
-    simulate_all_frozenlake_policies()
-    simulate_all_hunterschoice_policies()
+    # simulate_all_frozenlake_policies()
+    # simulate_all_hunterschoice_policies()
 
     print("Resetting QLearner Data")
     reset_qlearner_folders()
