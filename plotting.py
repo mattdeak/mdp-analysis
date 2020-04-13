@@ -353,10 +353,6 @@ def plot_hunterschoice_stats():
 
 
 
-def plot_frozenlake_performance(policy):
-    pass
-
-
 discount_rate_extraction = lambda x: float(x.split("_")[2])
 
 
