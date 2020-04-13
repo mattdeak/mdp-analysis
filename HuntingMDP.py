@@ -17,48 +17,14 @@ class TerminalStateError(Exception):
 
 
 class Animal:
-    def __init__(self, energy, escape_chance, injure_chance):
+    def __init__(self, name, energy, escape_chance, injure_chance):
         assert (
             escape_chance + injure_chance <= 1
         ), "Escape and injury chance can't cumulatively exceed 100% likelihood"
+        self.name = name
         self.energy = energy
         self.escape_chance = escape_chance
         self.injury_chance = injure_chance
-
-
-class Hunter:
-    def __init__(self, environment, policy):
-        """__init__
-
-        Parameters
-        ----------
-
-        environment : HunterMDP
-        policy : Function that takes a state and returns an action
-
-        Returns
-        -------
-        """
-        self.observation = environment.reset()
-        self.policy = policy
-        self.environment = environment
-
-    def act(self):
-        action = self.policy(self.observation)
-        self.observation, reward, terminal = self.environment.step(
-            self.observation, action
-        )
-        return self.observation, reward, terminal
-
-    def peek_action(self):
-        """peek_action
-
-        Return the action given the current state, but don't perform it"""
-        action = self.policy(self.observation)
-        return action
-
-    def restart(self):
-        self.observation = self.environment.reset()
 
 
 class HuntingMDP:
@@ -69,8 +35,8 @@ class HuntingMDP:
         hunting_cost=4,
         living_cost=2,
         recovery_time=5,
-        injured_penalty=0.2,
-
+        injured_penalty=0.1,
+        max_energy=50
     ):
         assert sum(appearance_weights) <= 1, "Appearance weights cannot exceed 1"
         self.appearance_weights = {}
@@ -81,7 +47,7 @@ class HuntingMDP:
 
         self.appearance_weights[NO_ANIMAL] = 1 - sum(appearance_weights)
 
-        self.max_energy = 50
+        self.max_energy = max_energy
 
         # normalize appearance weights
 
@@ -105,7 +71,7 @@ class HuntingMDP:
 
     def reset(self):
         # Start state will always be max energy, random animal
-        state =  (np.random.randint(-1, self.N_animals), self.max_energy, 0)
+        state = (np.random.randint(-1, self.N_animals), self.max_energy, 0)
         self.state = state
         return state
 
@@ -132,7 +98,7 @@ class HuntingMDP:
         return [0, 1]
 
     def step(self, action):
-        state = self.state # alias
+        state = self.state  # alias
         if self.is_terminal(state):
             raise TerminalStateError("Cannot perform step on terminal state")
 
@@ -240,7 +206,7 @@ class HuntingMDP:
                             T[action, state_ix, state_ix] = 1
                             R[
                                 action, state_ix, state_ix
-                            ] = 0  # Transitioning to this state will give -1000, but we'll cut it off there
+                            ] = 0  
 
                         else:
                             for next_animal in range(-1, self.N_animals):
