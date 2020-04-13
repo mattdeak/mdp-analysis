@@ -11,14 +11,18 @@ def run_all():
     # simulate_all_frozenlake_policies()
     # simulate_all_hunterschoice_policies()
 
-    print("Resetting QLearner Data")
-    reset_qlearner_folders()
+    # print("Resetting QLearner Data")
+    # reset_qlearner_folders()
 
-    print("Running All QLearner Experiments")
-    run_all_qlearners()
+    # print("Running All QLearner Experiments")
+    # run_all_qlearners()
+
     
-    print("Running Final Evaluations")
-    run_all_final_evaluations()
+    # print("Running Final Evaluations")
+    # run_all_final_evaluations()
+
+    print("Running Convergence Tests")
+    run_all_convergence_experiments()
 
 if __name__ == "__main__":
     run_all()

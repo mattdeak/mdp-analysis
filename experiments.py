@@ -228,7 +228,7 @@ def run_all_qlearners(
     env_map = {
         "hunter": hunter,
         "smalllake": small_lake,
-        "largelake": shaped_largelake,
+        "largeuake": shaped_largelake,
         "shaped_smalllake": shaped_smallake,
         "shaped_largelake": shaped_largelake,
     }
@@ -432,13 +432,10 @@ def run_convergence_experiment(env_name,N=20000, stopper=1):
 
 
 def run_all_convergence_experiments():
+    run_convergence_experiment('hunter')
+    run_convergence_experiment('smalllake')
+    run_convergence_experiment('largelake')
 
-    rmses = {}
-    for env in ['hunter','smalllake','largelake']:
-        print(f'Running {env} convergence experiment')
-        rmses[env] = run_convergence_experiment(env)
-
-    return rmses
 
 def run_best_qlearner_vs_optimal_experiment(env):
     best_q_lookup = {

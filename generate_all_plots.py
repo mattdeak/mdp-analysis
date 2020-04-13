@@ -13,5 +13,9 @@ def generate_all():
     render_frozenlake_policies('Frozen Lake Worst Policy',0.1,'small')
     render_hunting_policies()
 
+    plot_all_perrs()
+    plot_all_maxqs()
+    plot_all_convergences()
+
 if __name__ == "__main__":
     generate_all()
