@@ -27,7 +27,7 @@ frozenlake_dir = os.path.join(output_dir, "frozenlake")
 hunter_dir = os.path.join(output_dir, "hunterschoice")
 
 
-def create_hunterschoice_policy(raw_policy, size):
+def create_hunterschoice_policy(raw_policy):
     """create_hunterschoice_policy
 
     Parameters
@@ -40,10 +40,7 @@ def create_hunterschoice_policy(raw_policy, size):
     -------
     """
 
-    if size == "small":
-        env = create_small_hunting_environment()
-    else:
-        env = create_large_hunting_environment()
+    env = create_small_hunting_environment()
 
     def policy(state):
         s = env.state_to_idx[state]
@@ -71,24 +68,6 @@ def create_small_hunting_environment():
     return environment
 
 
-def create_large_hunting_environment():
-    # Base Environment
-    buffalo = Animal(30, 0.2, 0.5)
-    rabbit = Animal(9, 0.35, 0.0)
-    lemur = Animal(12, 0.4, 0.05)
-    bird = Animal(7, 0.25, 0)
-    ostrich = Animal(20, 0.4, 0.3)
-
-    animal_names = ["buffalo", "rabbit", "lemur", "bird", "ostrich"]
-
-    environment = HuntingMDP(
-        [buffalo, rabbit, lemur, bird, ostrich],
-        [0.05, 0.25, 0.1, 0.2, 0.08],
-        injured_penalty=0.1,
-        max_energy=150,
-    )
-
-    return environment
 
 
 def run_frozenlake_solvers():
@@ -156,10 +135,8 @@ def simulate_all_frozenlake_policies():
 
 def run_hunterschoice_solvers():
     small_huntinggrounds = create_small_hunting_environment()
-    large_huntinggrounds = create_large_hunting_environment()
 
     small_hunter_results = get_vipi_results(small_huntinggrounds, max_iter=20000)
-    large_hunter_results = get_vipi_results(large_huntinggrounds, max_iter=20000)
 
     for k, solver in small_hunter_results.items():
         solver_type, discount, _ = k.split("_")
@@ -169,26 +146,14 @@ def run_hunterschoice_solvers():
         ) as f:
             pickle.dump(solver, f)
 
-    for k, solver in large_hunter_results.items():
-        solver_type, discount, _ = k.split("_")
-
-        with open(
-            os.path.join(hunter_dir, f"largehunter_{solver_type}_{discount}"), "wb"
-        ) as f:
-            pickle.dump(solver, f)
-
 
 def simulate_hunterschoice_policy(policy_location, N=1000):
     print(f"Simulating Policy {policy_location}")
     with open(policy_location, "rb") as f:
         solver = pickle.load(f)
 
-    if "small" in policy_location:
-        grounds = create_small_hunting_environment()
-        policy = create_hunterschoice_policy(solver.policy, "small")
-    else:
-        grounds = create_large_hunting_environment()
-        policy = create_hunterschoice_policy(solver.policy, "large")
+    grounds = create_small_hunting_environment()
+    policy = create_hunterschoice_policy(solver.policy, "small")
 
     agent = Agent(grounds, policy)
 
